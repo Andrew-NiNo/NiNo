@@ -9,22 +9,26 @@
 
 using namespace std;
 
-
 vector<string> station;
+vector<string> line_coord;
+
+ofstream outf("Dubai_Test.txt");
 
 
 PAIR find_city(string const& s){
 
     string::size_type n;
     string search_word ="docname=\"";
-    string str;
+    string city;
 
     n = s.find(search_word);
-    str = s.substr(n+search_word.size());
-    n = str.find_first_of(".");
-    str = str.substr(0,n);
+    city = s.substr(n+search_word.size());
+    n = city.find_first_of(".");
+    city = city.substr(0,n);
 
-return make_pair(str,n);
+    outf<<"City:  "<<city<<'\n';
+
+return make_pair(city,n);
 }
 
 PAIR find_line(string const& s){
@@ -36,6 +40,8 @@ PAIR find_line(string const& s){
     n = s.find(search_word);
     line=s.substr(n+search_word.size(),2);
 
+    outf<<"Line:   "<<line<<'\n';
+
 return make_pair(line,n);
 }
 
@@ -44,8 +50,6 @@ struct Line{
     string tag;
     Line(string tag): tag(tag){}
 };
-
-vector<string> line_coord;
 
 PAIR find_coordinates(string const& s,string::size_type p){
 
@@ -128,17 +132,16 @@ PAIR station_vector(string const& s,string::size_type p){
 return make_pair(str,n);
 }
 
-void print(string const &s,string::size_type p ){
-    if (p == string::npos) {
-        cout << "not found\n";
-    } else {
-        cout << "found: " << s.substr(p) << '\n';
-    }
+void print(const vector<string> &s,const vector<string> &p){
+
+          for(int i=0; i<s.size();i++){
+
+        outf<<s.operator[](i)<<" "<<p.operator[](i)<<'\n';
+
+        };
 }
 
 int main() {
-
-    ofstream outf("Dubai_Test.txt");
 
     ifstream inf("dubai1.svg");
 
@@ -152,32 +155,19 @@ int main() {
     while(inf){
         getline(inf, temp);
         svg+=temp;
-
     };
 
     auto c = find_city(svg);
-    outf<<"\n City:  "<<c.first<<'\n';
 
     auto p = find_line(svg);
-    outf<<"\n Line:  "<<p.first<<'\n';
 
     auto p1 = find_coordinates(svg, p.second);
 
     coord_vector(p1.first);
 
-//        for(auto & ref: line_coord)
-//        cout<<ref<<'\n';
-
     auto p2 = station_vector(p1.first,p1.second);
 
-//     for(auto &ref: station){
-//        outf<<ref<<'\n';
-
-        for(int i=0; i<station.size();i++){
-
-        outf<<station.operator[](i)<<" "<<line_coord.operator[](i)<<'\n';
-
-        };
+    print(station,line_coord);
 
 return 0;
 }
