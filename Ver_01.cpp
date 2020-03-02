@@ -15,7 +15,7 @@ vector<string> line_coord;
 ofstream outf("Dubai_Test.txt");
 
 
-PAIR find_city(string const& s){
+PAIR find_city(const string & s){
 
     string::size_type n;
     string search_word ="docname=\"";
@@ -31,28 +31,27 @@ PAIR find_city(string const& s){
 return make_pair(city,n);
 }
 
-PAIR find_line(string const& s){
+PAIR find_line( string & s){
 
     string::size_type n;
     string search_word ="label=\"path";
     string line;
 
     n = s.find(search_word);
+
+    if (string::npos == n){
+        line.clear();
+    }
+    else{
     line=s.substr(n+search_word.size(),2);
 
-    outf<<"Line:   "<<line<<'\n';
+    outf<<'\n'<<"Line:   "<<line<<'\n'<<'\n';
+    }
 
 return make_pair(line,n);
 }
 
-struct Line{
-
-    string tag;
-    Line(string tag): tag(tag){}
-};
-
 PAIR find_coordinates(string const& s,string::size_type p){
-
 
     string s_sub=s.substr(p);
     string::size_type n;
@@ -70,7 +69,7 @@ void coord_vector(string const& s){
     int fragm_length = s.find_first_of('"');
     string string_coord = s.substr(0,fragm_length);
 
-    string tmp="", word,tmp_c="";
+    string tmp, word,tmp_c;
     int flag = 0;
     int flag_c = 0;
 
@@ -124,26 +123,25 @@ PAIR station_vector(string const& s,string::size_type p){
     ss<<str;
 
     string str_stream;
+
     while(ss){
         getline(ss,str_stream,',');
         station.push_back(str_stream);
     }
-
-return make_pair(str,n);
+return make_pair(s_sub,n);
 }
 
 void print(const vector<string> &s,const vector<string> &p){
 
-          for(int i=0; i<s.size();i++){
+    for(int i=0; i<s.size();i++){
 
         outf<<s.operator[](i)<<" "<<p.operator[](i)<<'\n';
-
-        };
+    };
 }
 
 int main() {
 
-    ifstream inf("dubai1.svg");
+    ifstream inf("dubai2.svg");
 
 	if (!inf){
 		cerr << "Whoops..,file could not be opened." << endl;
@@ -157,17 +155,27 @@ int main() {
         svg+=temp;
     };
 
-    auto c = find_city(svg);
+        find_city(svg);
 
-    auto p = find_line(svg);
+    do{
 
-    auto p1 = find_coordinates(svg, p.second);
+        auto p = find_line(svg);
 
-    coord_vector(p1.first);
+        if(p.first.empty()) break;
 
-    auto p2 = station_vector(p1.first,p1.second);
+        auto p1 = find_coordinates(svg, p.second);
 
-    print(station,line_coord);
+        coord_vector(p1.first);
+
+        auto p2 = station_vector(p1.first,p1.second);
+
+        print(station,line_coord);
+
+        station.clear();
+        line_coord.clear();
+        svg = p2.first;
+
+    } while(1);
 
 return 0;
 }
