@@ -18,7 +18,6 @@ public:
     void calculator2(string,int);
     void show(ofstream &);
 
-
     ~Counter() {};
 };
 

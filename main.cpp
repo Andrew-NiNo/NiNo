@@ -18,11 +18,11 @@ using namespace std;
 int main(int argc, char *argv[])
 {
 
-    Metro City;
+    Metro City;                                    ///Создаем два объекта классов Metro и Counter(для выводя зачений в log файл)
     Counter Log;
 
-    ifstream inf(argv[1]);
-
+    ifstream inf(argv[1]);                         ///Ожидаем нужный аргумент из cmd с указанным путем к файлу для парсинга
+                                                   ///И создаем поток с данными из файла
     if (!inf)
     {
         cerr << "Whoops..,file could not be opened." << endl;
@@ -33,45 +33,36 @@ int main(int argc, char *argv[])
 
     while(inf)
     {
-        getline(inf, temp);
+        getline(inf, temp);                         ///Создаем из потока строку
         svg+=temp;
     };
+                                                    ///Ищем нужное название в строке и создаем с этим именем исходящие файлы
+    auto start = City.search_block(svg,0,Metro::START);
 
-    auto n = City.start(svg,0);
+    ofstream outf("C:\\Users\\Hp\\Dropbox\\hello\\Work\\Test\\Ver_03\\CREATED "+ start.first + ".svg");
+    ofstream logf("C:\\Users\\Hp\\Dropbox\\hello\\Work\\Test\\Ver_03\\CREATED "+ start.first + ".log");
 
-    ofstream outf("C:\\Test\\Ver_02\\CREATED "+ n.first + ".svg");
-    ofstream logf("C:\\Test\\Ver_02\\CREATED "+ n.first + ".log");
-    City.send_to_stream(outf,n.first);
+    City.send_to_file(outf,start.first);
 
     do
     {
+        auto line = City.search_block(svg,0,Metro::LINE);           ///Ищем возможные пути(линии метро)
 
-        auto p = City.find_or_stop(svg,logf);
+        City.send_to_file(outf,line.first);
+        Log.calculator1("Line: ",line.second);                      ///Считаем пути
 
-        if(p.first.empty())
-            break;
+        auto coord = City.find_coordinates(svg, line.second,Metro::COORDINATES);    ///Ищем коордиинаты станций
 
-        else
-        {
-            City.send_to_stream(outf,p.first);
-            Log.calculator1("Line: ",p.second);
-        };
+        auto stat = City.find_station(svg, coord.second,Metro::STATION);            ///Ищем станции
 
-        auto p1 = City.find_coordinates(svg, p.second);
+        City.print(station,line_coord,outf);                                ///Результаты отправляем в файл
+        Log.calculator2("Station: ",stat.second);                       ///Считаем станции
 
-        auto p2 = City.find_station(p1.first, p1.second);
-
-        City.print(station,line_coord,outf);
-        Log.calculator2("Station: ",p2.second);
-
-        station.clear();
-        line_coord.clear();
-        svg = p2.first;
-
+        svg = stat.first;                                               ///Переопределяем строку для следующей итерации цикла
     }
-    while(1);
+    while(ac_dc);
 
-    Log.show(logf);
+    Log.show(logf);                                             ///Печатаем в log файл зачения счетчиков
 
     return 0;
 };

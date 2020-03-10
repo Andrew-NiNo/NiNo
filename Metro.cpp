@@ -6,88 +6,100 @@
 
 using namespace std;
 
-unordered_map <string,unordered_map<string,string>> my_map;
+unordered_map <Metro::Mode,unordered_map<string,string>> my_map;
 vector<string>line_coord;
 vector<string>station;
 
-bool ac_dc ;
 
-Metro::Metro() {}
+bool ac_dc = true;                                      ///Реализуем логическую переменную для работы с циклом
 
-void Metro::replacement(string & replace_string,MAP & my_map)
+Metro::Metro()                                          ///В конструкторе заполняем контейнер unordered_map значениями
 {
-    my_map.insert({"start",{{tags.start_begin,tags.start_stop}}});
+
+    my_map.insert({START,{{tags.start_begin,tags.start_stop}}});
+    my_map.insert({LINE,{{tags.find_begin,tags.find_stop}}});
+    my_map.insert({COORDINATES,{{tags.coordinates_begin,tags.coordinates_stop}}});
+    my_map.insert({STATION,{{tags.station_begin,tags.station_stop}}});
+    my_map.insert({METHOD_1,{{"",""}}});                                        ///Есть возможность заполнения новыми тегами
+    my_map.insert({METHOD_2,{{"",""}}});
 
 }
 
-PAIR Metro::search_block(string &line,string::size_type n)
+void Metro::replacement(Mode form)                          ///Этим членом-функцией происодит заполнение дополнительными тегами
 {
+    string start, finish;
+    MAP::const_iterator got = my_map.find(form);
 
-    string::size_type p;
-    string str;
-
-    if(n)
+    if ( got == my_map.end() )
+        cout << "Not found ";
+    else
     {
-        line=line.substr(n);
+        cout<<"  Vvedite start..."<<'\n';
+        cin>>start;
+        cout<<"  Vvedite finish..."<<'\n';
+        cin>>finish;
+        my_map[form][start]=finish;
+    }
+}
+
+PAIR Metro::search_block(string &line,string::size_type indx,Mode form)         ///Это основной блок для поиска с проверками
+{
+    string start, finish, str;
+    string::size_type tmp_indx;
+
+    MAP::const_iterator got = my_map.find(form);              ///Ищем по полученному значению перечислителя нужное значение тегов
+
+    if ( got == my_map.end() )
+        cout << "not found ";
+    else
+        for(const auto& w : got->second)
+        {
+            start = w.first ;
+            finish = w.second ;
+        }
+
+    if(indx)                                                ///Прорабатываются варианты поиска
+    {
+        line = line.substr(indx);
     }
 
-    n = line.find(tags.coordinates_begin);
-    line = line.substr(n+tags.coordinates_begin.size());
-    n = line.find(tags.coordinates_stop);
-    str = line.substr(0,n);
+    tmp_indx = line.find(start);
 
-    return make_pair(line,n);
-}
-
-void Metro::send_to_stream(ofstream &of,string str)
-{
-
-    of<<'\t'<<str<<endl;
-}
-
-PAIR Metro::start(string &line, string::size_type n)
-{
-    string city;
-
-    n = line.find(tags.start_begin);
-    city = line.substr(n+tags.start_begin.size());
-    n = city.find(tags.start_stop);
-    city = city.substr(0,n);
-
-    return make_pair(city,n);
-}
-
-PAIR Metro::find_or_stop(string &s,ofstream &logf)
-{
-
-    string::size_type n, p;
-    string line;
-
-    n = s.find(tags.find_begin);
-
-    if (string::npos == n)
-    {
+    if (string::npos == tmp_indx)                           ///Если поиск невозможен, очищаем содержимое строки
+    {                                                       ///меняем условие для цикла и выводим пустые значения
         line.clear();
+        ac_dc = false;
+        return make_pair(line,0);
     }
     else
     {
-        line=s.substr(n+tags.find_begin.size());
-        p = line.find(tags.find_stop);
-        line=line.substr(0,p);
+        str = line.substr(tmp_indx+start.size());           ///В обратном случае проходит поиск и возврат нужной подстроки
+        indx = str.find(finish);
+        str = str.substr(0,indx);
     }
-    return make_pair(line,n);
+
+    return make_pair(str,tmp_indx);
 }
 
-PAIR Metro::find_coordinates(string &line,string::size_type n)
+void Metro::send_to_file(ofstream &of,string line)          ///Метод для дозаполнения выходных данных
 {
-    auto output = search_block(line,n);
+
+    of<<'\t'<<line<<endl;
+}
+
+PAIR Metro::find_coordinates(string &line,string::size_type indx,Mode form) ///Член-функция для поиска координат
+{
+    if(line.empty())
+        return make_pair(line,indx);                                    ///Если строка пустая, передаем ее дальше
+
+    auto output = search_block(line,indx,form);                         ///Ищем нужную подстроку
 
     string tmp, word,tmp_c;
     int flag = 0;
     int flag_c = 0;
 
     stringstream s_str(output.first);
-    while(s_str>>word)
+    while(s_str>>word)                                      ///Отправляем ее в поток и работаем в нем с условными символами
     {
 
         if(word=="c"||flag_c>0 && flag_c<4)
@@ -101,7 +113,7 @@ PAIR Metro::find_coordinates(string &line,string::size_type n)
         if(flag_c == 4)
         {
             tmp_c = " " + tmp_c;
-            line_coord.back() += tmp_c;
+            line_coord.back() += tmp_c;                     ///Результат отправляем в вектор
             flag_c = 0;
             tmp_c = "";
         }
@@ -117,84 +129,50 @@ PAIR Metro::find_coordinates(string &line,string::size_type n)
         if (flag == 1)
         {
             flag = 0;
-            line_coord.push_back(word);
+            line_coord.push_back(word);                     ///Результат отправляем в вектор
             tmp.clear();
         }
     }
     return make_pair(output.first,output.second);
 }
 
-PAIR Metro::find_station(string &s,string::size_type p)
+PAIR Metro::find_station(string &line,string::size_type indx,Mode form)     ///Член-функция для поиска станций
 {
+    if(line.empty())
+        return make_pair(line,indx);                               ///Проверка строки на 0
 
-    string s_sub=s.substr(p);
-    string::size_type n;
-    string str;
+    line = line.substr(indx);
 
-    n = s_sub.find(tags.station_begin);
-    str=s_sub.substr(n+tags.station_begin.size());
+    indx = line.find(tags.correct);                                ///В этой реализации стоит доп. поиск correct
 
-    n = str.find(tags.station_stop);
-    str=str.substr(n+tags.station_stop.size());
+    auto output = search_block(line,indx,form);                     ///Ищем нужную подстроку
 
-    n = str.find(tags.correct);
-    str=str.substr(0, n);
+    stringstream s_str;
+    s_str << output.first;                                         ///Через поток в цикле отправляем найденные значения в вектор
 
-    stringstream ss;
-    ss<<str;
+    string tmp_stream;
 
-    string str_stream;
-
-    while(ss)
+    while(s_str)
     {
-        getline(ss,str_stream,',');
-        station.push_back(str_stream);
+        getline(s_str,tmp_stream,',');
+        station.push_back(tmp_stream);
     }
-    n = station.size();
-    return make_pair(s_sub,n);
+    indx = station.size();
+
+    return make_pair(line,indx);
 }
 
-void Metro::print(vector<string> &s,vector<string> &p, ofstream & fs)
+void Metro::print(vector<string> &v1,vector<string> &v2, ofstream & fs)       /// Выводим в файл найденные значения
 {
 
-    for(int i=0; i<s.size(); i++)
+    for(int i=0; i<v1.size(); i++)
     {
 
-        fs<<"\t "<<s.operator[](i)<<"  "<<p.operator[](i)<<'\n';
+        fs<<"\t "<<v1.operator[](i)<<"   "<<v2.operator[](i)<<'\n';
     };
+    v1.clear();                                                             ///С очисткой векторов
+    v2.clear();
 }
 
-
-
-//void Metro::show()const{
-//
-//    cout<<" City: "<<this<<'\n';
-//
-////             for(string::size_type i =0; i < m_line.size(); i++) {
-////                    cout<<m_line<<"   Height "<< m_line[i].height <<"  Width "<<m_line[i].width<<'\n';
-//            };
-
-
-
-
-//
-//    bool City::operator[](const string& name){
-//
-//        for(auto &ref: m_line){
-//            if(ref.first==name)
-//                return true;
-//            }
-//            double height;
-//            double width;
-//            cin>>height;
-//            cin>>width;
-//
-//        Subwey_Station temp{name,height,width};
-//
-//        m_line.emplace(pair<string,Subwey_Station>("",temp));
-//
-//         show();
-//         return false;
-//};
 
 
